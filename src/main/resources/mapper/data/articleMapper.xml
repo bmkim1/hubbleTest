@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="side.side.mapper.data.ArticleMapper">
+
+    <resultMap type="companySearchParam" id="1" autoMapping="true">
+        <id column="id_seq" property="idSeq"/>
+        <result column="company_name" property="companyName"/>
+        <result column="ceo_name" property="ceoName"/>
+        <result column="article_update_datetime" property="articleUpdateDatetime"/>
+    </resultMap>
+
+    <insert id="addArticleListBackup" parameterType="list">
+        INSERT INTO data.article_back(id_seq, news_id, title, contents, author, write_date, regist_date, provider, link, images)
+        VALUES
+        <foreach collection="list" item="at" separator="," >
+            (#{at.idSeq}, #{at.newsId}, #{at.title}, #{at.contents}, #{at.author}, #{at.writeDate}, NOW(), #{at.provider}, #{at.link}, #{at.images})
+        </foreach>
+        ON CONFLICT (id_seq, news_id) DO NOTHING
+    </insert>
+
+    <insert id="addArticleList" parameterType="list">
+        INSERT INTO data.article (id_seq, source, news_id, origin_link, link, publish_datetime, publisher, title, prev_contents, full_contents, author, images, keyword1, keyword2, keyword3, keyword4)
+        VALUES
+        <foreach collection="list" item="atc" separator="," >
+            (#{atc.idSeq}, #{atc.source}, #{atc.newsId}, #{atc.originLink}, #{atc.link}, #{atc.publishDatetime}, #{atc.publisher}, #{atc.title}, #{atc.prevContents}, #{atc.fullContents}, #{atc.author}, #{atc.images}, #{atc.keyword1}, #{atc.keyword2}, #{atc.keyword3}, #{atc.keyword4})
+        </foreach>
+        ON CONFLICT (id_seq, title) DO NOTHING
+    </insert>
+
+    <insert id="addInvestArticleList" parameterType="list">
+        INSERT INTO data.article_invest (id_seq, source, news_id, origin_link, link, publish_date, publish_datetime, publisher, title, prev_contents, full_contents, author, images, keyword1, keyword2, keyword3, keyword4)
+        VALUES
+        <foreach collection="list" item="atc" separator="," >
+            (#{atc.idSeq}, #{atc.source}, #{atc.newsId}, #{atc.originLink}, #{atc.link}, (#{atc.publishDatetime})::date, #{atc.publishDatetime}, #{atc.publisher}, #{atc.title}, #{atc.prevContents}, #{atc.fullContents}, #{atc.author}, #{atc.images}, #{atc.keyword1}, #{atc.keyword2}, #{atc.keyword3}, #{atc.keyword4})
+        </foreach>
+        /*
+        ON CONFLICT (id_seq, publish_date, origin_link)
+        DO UPDATE NOTHING
+        (keyword1, keyword2, keyword3) = ((data.article_invest.keyword1 or excluded.keyword1), (data.article_invest.keyword2 or excluded.keyword2), (data.article_invest.keyword3 or excluded.keyword3)) */
+    </insert>
+
+    <select id="getArticleUpdateDatetime" resultType="articleUpdateDatetime">
+        SELECT article_update_datetime FROM data.article_update_datetime WHERE id_seq = #{idSeq}
+    </select>
+
+    <insert id="addArticleUpdateDatetime" parameterType="int">
+        INSERT INTO data.article_update_datetime (id_seq, article_update_datetime) VALUES (#{idSeq}, null)
+        ON CONFLICT (id_seq) DO NOTHING;
+    </insert>
+
+    <update id="updateArticleUpdateDate">
+        UPDATE data.article_update_datetime SET article_update_datetime = #{datetime} WHERE id_seq = #{idSeq}
+    </update>
+
+    <select id="getTestCompanySearchParams" parameterType="int" resultType="companySearchParam">
+        SELECT
+        c.id_seq,
+        c.company_name,
+        ceo.name as ceo_name,
+        c.article_update_datetime
+        FROM public.unv_company c
+        INNER JOIN result.hometax rh on c.id_seq = rh.id_seq
+        INNER JOIN public.unv_ceo ceo on c.id_seq = ceo.id_seq
+        WHERE rh.termination = 'TAXPAYER' and c.article_update_datetime IS NULL and ceo.name IS NOT NULL
+        LIMIT #{size}
+    </select>
+
+    <select id="getArticleListByIdSeq" parameterType="int" resultType="article">
+        SELECT article_seq, id_seq, create_datetime, update_datetime, source, link, news_id, title, prev_contents, publish_datetime, publisher, full_contents, author, images, origin_link, keyword1, keyword2, keyword3, keyword4
+        FROM data.article
+        WHERE id_seq = #{idSeq} and source = 'NAVER'
+        ORDER BY publish_datetime DESC
+        LIMIt 1000
+    </select>
+
+    <select id="getPublisherByDomain" parameterType="string" resultType="string">
+        SELECT name
+        FROM data.article_publisher
+        WHERE url_domain = #{domain}
+    </select>
+
+    <insert id="addDomainEmptyPublisher" parameterType="string">
+        INSERT INTO data.article_publisher (url_domain, url_host)
+        VALUES (#{domain}, #{host})
+        ON CONFLICT (url_domain) DO NOTHING
+    </insert>
+
+</mapper>
