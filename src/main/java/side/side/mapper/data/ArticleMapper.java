@@ -1,6 +1,6 @@
 package side.side.mapper.data;
 
-import org.mapstruct.Mapper;
+import org.apache.ibatis.annotations.Mapper;
 import org.springframework.data.repository.query.Param;
 import side.side.domain.data.Article;
 import side.side.domain.data.ArticleUpdateDatetime;
